@@ -15,6 +15,10 @@ export interface ThreeScene {
   /** 相机动画组，由内部循环驱动 */
   readonly tweenGroup: Group
   requestRender(): void
+  /** 立即同步渲染一帧（截图前调用，SRS FR07-01） */
+  renderOnce(): void
+  /** 临时覆写渲染尺寸与像素比（2x 高清截图用，结束后恢复，SRS FR07-02） */
+  resizeTo(w: number, h: number, pixelRatio: number): void
   /** 替换渲染管线（如 EffectComposer），传 null 恢复直接渲染 */
   setCustomRender(fn: (() => void) | null): void
   /** 注册尺寸变化监听（composer 等需要同步尺寸） */
@@ -220,6 +224,18 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
     canvas,
     tweenGroup,
     requestRender: () => {
+      dirty = true
+    },
+    renderOnce() {
+      if (customRender) customRender()
+      else renderer.render(scene, camera)
+    },
+    resizeTo(w, h, pr) {
+      renderer.setPixelRatio(pr)
+      renderer.setSize(w, h, false)
+      camera.aspect = w / h
+      camera.updateProjectionMatrix()
+      resizeCbs.forEach((cb) => cb(w, h))
       dirty = true
     },
     setCustomRender(fn) {

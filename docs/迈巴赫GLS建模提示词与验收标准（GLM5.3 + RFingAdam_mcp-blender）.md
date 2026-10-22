@@ -119,7 +119,7 @@ print(bpy.context.scene.name)
 以下提示词可直接复制发送给 GLM5\.3。它已内置部件清单、材质独立红线、坐标系、迭代截图自检与导出参数，**不要裁剪其中任何一段**，否则可能破坏换色功能。
 
 ```text
-你现在通过 mcp-blender 工具远程控制 Blender 4.2，任务是：从零创建一台迈巴赫GLS灰模，用于 Vue3+Three.js 网页独立部件换色项目，最终导出 GLB 文件。
+你现在通过 mcp-blender 工具远程控制 Blender ,/home/qs/tools/kilo/blender-5.2.3-linux-x64，任务是：从零创建一台迈巴赫GLS灰模，用于 Vue3+Three.js 网页独立部件换色项目，最终导出 GLB 文件。
 
 【第一步：清场】
 先清空当前场景：删除默认立方体、灯光、相机，确保从干净场景开始。

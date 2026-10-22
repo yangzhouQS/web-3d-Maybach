@@ -18,6 +18,7 @@ import type { CarModel } from '@/hooks/useCarModel'
 import { createCarModel } from '@/hooks/useCarModel'
 import { useUndoRedo } from '@/hooks/useUndo'
 import { createInitialParts } from '@/config/partConfig'
+import { captureScreenshot } from '@/utils/screenshot'
 import { dialog, message } from '@/utils/feedback'
 import { isMobileDevice } from '@/utils/device'
 import type {
@@ -165,6 +166,10 @@ export default defineComponent({
       lastSelected.value = null
     }
 
+    const handleScreenshot = (scale: 1 | 2) => {
+      if (threeApi) void captureScreenshot(threeApi, scale)
+    }
+
     const handleViewPreset = (theta: number, phi: number) => {
       threeApi?.flyToAngles(theta, phi)
     }
@@ -235,7 +240,7 @@ export default defineComponent({
               handleRenderOption({ autoRotate: !renderOption.value.autoRotate })
             }
             onResetAll={handleResetAll}
-            onScreenshot={null}
+            onScreenshot={handleScreenshot}
             onOpenSchemes={() => (showSchemes.value = true)}
           />
         </header>

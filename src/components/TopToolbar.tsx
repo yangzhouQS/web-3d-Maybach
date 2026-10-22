@@ -1,5 +1,5 @@
 import { defineComponent, type PropType } from 'vue'
-import { NButton, NTooltip } from 'naive-ui'
+import { NButton, NDropdown, NTooltip } from 'naive-ui'
 
 /** 顶部通栏操作按钮组（SRS §6.1） */
 export default defineComponent({
@@ -13,7 +13,7 @@ export default defineComponent({
     onRedo: { type: Function, required: true },
     onToggleAutoRotate: { type: Function, required: true },
     onResetAll: { type: Function, required: true },
-    onScreenshot: { type: Function as PropType<(() => void) | null>, default: null },
+    onScreenshot: { type: Function as PropType<(scale: 1 | 2) => void>, default: null },
     onOpenSchemes: { type: Function as PropType<(() => void) | null>, default: null },
   },
   setup(props) {
@@ -60,9 +60,17 @@ export default defineComponent({
           自动旋转
         </NButton>
         {props.onScreenshot && (
-          <NButton size="small" quaternary disabled={props.disabled} onClick={() => props.onScreenshot?.()}>
-            截图
-          </NButton>
+          <NDropdown
+            options={[
+              { label: '标准截图（1x）', key: '1' },
+              { label: '高清截图（2x）', key: '2' },
+            ]}
+            onSelect={(key: string | number) => props.onScreenshot?.(key === '2' ? 2 : 1)}
+          >
+            <NButton size="small" quaternary disabled={props.disabled}>
+              截图
+            </NButton>
+          </NDropdown>
         )}
         {props.onOpenSchemes && (
           <NButton size="small" quaternary disabled={props.disabled} onClick={() => props.onOpenSchemes?.()}>
