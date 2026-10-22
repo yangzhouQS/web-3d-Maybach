@@ -9,6 +9,14 @@ function emptyStorage(): SchemeStorage {
   return { schemaVersion: '1.0', schemes: [] }
 }
 
+/** crypto.randomUUID 兜底（SRS 目标浏览器均支持，防御性降级） */
+function genId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 function readStorage(): SchemeStorage {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -64,7 +72,7 @@ export function useColorScheme(): ColorSchemeStore {
     },
     create(name, partsData) {
       const scheme: ColorScheme = {
-        id: crypto.randomUUID(),
+        id: genId(),
         name,
         createdAt: Date.now(),
         parts: partsData,

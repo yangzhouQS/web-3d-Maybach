@@ -5,6 +5,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { Tween, Easing } from '@tweenjs/tween.js'
 import type { ThreeScene } from '@/hooks/useThreeScene'
 import { modelConfig } from '@/config/modelConfig'
 import { buildPlaceholderCar } from '@/utils/placeholderCar'
@@ -90,6 +91,31 @@ export function createCarModel(
   )
   let outlineEnabled = false
   let hoverPartName: string | null = null
+
+  // hover 呼吸脉冲：限时 1.2s（yoyo×2）后回归静态描边；
+  // 脉冲期间由 onUpdate 逐帧 requestRender，结束即停帧，不违背 §2.4-5
+  const HOVER_BASE_STRENGTH = 3
+  let pulseTween: Tween<{ s: number }> | null = null
+
+  function pulseHoverOutline(): void {
+    if (!outlineEnabled) return
+    pulseTween?.stop()
+    const proxy = { s: HOVER_BASE_STRENGTH }
+    pulseTween = new Tween(proxy, three.tweenGroup)
+      .to({ s: HOVER_BASE_STRENGTH + 3 }, 420)
+      .repeat(2)
+      .yoyo(true)
+      .easing(Easing.Sinusoidal.InOut)
+      .onUpdate(() => {
+        hoverOutline.edgeStrength = proxy.s
+        three.requestRender()
+      })
+      .onComplete(() => {
+        hoverOutline.edgeStrength = HOVER_BASE_STRENGTH
+        three.requestRender()
+      })
+      .start()
+  }
 
   // ---- 材质工具：克隆后统一操作（SRS §2.4-2 禁改共享材质）----
   function eachMat(mesh: THREE.Mesh, fn: (m: THREE.MeshStandardMaterial) => void) {
@@ -232,6 +258,9 @@ export function createCarModel(
     three.scene.add(root)
     three.fitFromBox(new THREE.Box3().setFromObject(root), modelConfig.camera)
 
+    if (!fallback && partMeshes.size === 0) {
+      message.warning('模型部件均未匹配，请检查 mesh 命名是否符合附录 A 规范')
+    }
     if (import.meta.env.DEV && unmatched.length) {
       console.warn('[useCarModel] 未匹配的 mesh：', unmatched.join(', '))
     }
@@ -302,6 +331,7 @@ export function createCarModel(
   function setHoverFromPanel(meshName: string | null): void {
     hoverPartName = meshName
     hoverOutline.selectedObjects = meshName ? getPartMeshes(meshName) : []
+    if (meshName) pulseHoverOutline()
     three.requestRender()
   }
 
@@ -354,6 +384,7 @@ export function createCarModel(
       if (name !== hoverPartName) {
         hoverPartName = name
         hoverOutline.selectedObjects = name && outlineEnabled ? getPartMeshes(name) : []
+        if (name) pulseHoverOutline()
         cb.onHoverChange?.(name)
         three.requestRender()
       }
@@ -456,6 +487,7 @@ export function createCarModel(
     retry,
     dispose() {
       cancelTimeout()
+      pulseTween?.stop()
       three.canvas.removeEventListener('pointerdown', onPointerDown)
       three.canvas.removeEventListener('pointerup', onPointerUp)
       three.canvas.removeEventListener('pointermove', onPointerMove)

@@ -16,7 +16,7 @@
 
 - **大模型**：GLM5\.3（智谱开放平台，支持 MCP 协议）
 
-- **建模引擎**：Blender 4\.0 / 4\.2 LTS
+- **建模引擎**：Blender 5\.2\.3 LTS（本机：/home/qs/tools/kilo/blender\-5\.2\.3\-linux\-x64；4\.2\+ 均兼容）
 
 - **MCP 服务**：RFingAdam/mcp\-blender（218 个工具，默认端口 9876）
 
@@ -38,7 +38,7 @@
 
 ## 2\.1 前置依赖
 
-- Blender：4\.0 / 4\.2 LTS（推荐，glTF 导出与 MCP 插件兼容最稳）
+- Blender：5\.2\.3 LTS（本机已就绪；4\.2 及以上均可，glTF 导出与 MCP 插件兼容）
 
 - Python ≥3\.10
 
@@ -68,6 +68,8 @@ cd mcp-blender
 4. 点击 **Start MCP Server**，默认监听 127\.0\.0\.1:9876
 
 5. 保持 Blender 窗口打开、退出编辑模式，不要关闭
+
+> 本机环境（GLM 开发机）已预装：插件以符号链接安装于 `~/.config/blender/5.2/scripts/addons/blender_mcp_addon`，Blender 启动脚本 `/tmp/kilo/start_mcp.py` 自动启用插件并 Start Server。手动重启 Blender 后需在 View3D 侧栏 MCP 面板重新点击 Start Server。
 
 ### 步骤 3：启动 MCP Server（推荐 uvx）
 
@@ -111,6 +113,8 @@ print(bpy.context.scene.name)
 ```
 
 > 能正常返回场景名（如 Scene）即表示 GLM → MCP → Blender 链路已打通。若工具未加载、返回报错，先按第 8 章故障排查处理。
+
+> 本机 mcp-blender 工具名对照：执行代码=blender_execute_script；物体清单=blender_object_list；创建物体=blender_object_create；创建材质=blender_material_create；材质赋值=blender_material_assign；导出 GLB=blender_export_gltf；截图=blender_render_screenshot / blender_render_multi_angle。
 > 
 > 
 
@@ -156,17 +160,18 @@ print(bpy.context.scene.name)
    Metallic = 金属度 0~1
    Roughness = 粗糙度 0~1
 4. 不要使用程序纹理、渐变、Cycles专属节点、动画材质
+5. window 车窗：Base Color 深灰 + Alpha≈0.3（glTF alphaMode BLEND）；禁用 Transmission 透射扩展（前端 MeshStandardMaterial 不支持，需 MeshPhysicalMaterial 且部分环境黑屏）
 
 【第四步：比例与造型】
 1. 整车比例参考迈巴赫GLS：长5210mm、宽2030mm、高1838mm，轴距约3135mm
 2. 车身低趴修长，A柱倾斜、车顶流畅弧线、车尾直立
-3. 使用镜像修改器做左右对称（X轴），但完成后左右部件（mirror_l/mirror_r、wheel_fl/wheel_fr等）必须应用镜像并拆成独立Object
+3. 车头朝 -X、车宽沿 Y，故左右对称使用镜像修改器沿 Y 轴（跨 XZ 平面），不能用 X 轴（那会变成前后镜像）；完成后左右部件（mirror_l/mirror_r、wheel_fl/wheel_fr等）必须应用镜像并拆成独立Object
 4. 每完成一轮形体修改，必须调用截图工具获取 45°前斜侧 + 侧面视口截图，自己检查：轮距比例、车顶弧线、车头长度、车轮大小、部件是否穿模粘连
 5. 发现比例错误、部件粘连、物体被误合并，立即修复，全程保持部件独立
 
 【第五步：导出前处理】
-1. 所有Object应用缩放、旋转、位置（坐标清零），应用全部修改器
-2. 设置坐标系：车头朝向 -X 轴，向上轴 +Y（glTF标准）
+1. 所有Object执行 Apply（应用）缩放/旋转/位置——变换数值清零但世界位置不变，禁止把部件挪回原点；并应用全部修改器。整车原点置于车底几何中心（车轮接地 Z=0），建模单位 1=1米
+2. 坐标系约定：建模期（Blender Z-up）车头沿 -X、车宽沿 Y、车高沿 Z；glTF 导出器自动转为 +Y 向上，成品 GLB 车头朝 -X。+Y 向上是 glTF 标准；-X 前向是本项目与前端 partConfig 的约定（glTF 官方惯例前向为 +Z），以前端 SRS 为准
 3. 法线全部朝外，全部平滑着色，删除多余内部碎面
 4. 总三角面数控制在 25万以内，适合网页加载
 
@@ -219,6 +224,11 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 
 此表是 GLM 建模与前端代码的**唯一契约**，meshName 字段大小写敏感。可换色部件在前端面板开放取色器；固定部件置灰仅展示。
 
+> 契约补充（防验收误判）：
+> 1. V1.0 固定 17 部件——大灯/尾灯并入 bumper_front / bumper_rear，后门把手省略，排气口并入 bumper_rear。**禁止**为还原度添加第 18 个部件（A1 会判"多余"），也不要因灯具未单列而判"缺失"。
+> 2. Blender 导出 glTF 以 **Object 名**命名节点：重命名必须改 Object 名（选中后 F2），仅改 Mesh 数据名无效。
+> 3. 建模单位 1=1 米（整车长 5.21m），导出 glTF 单位即为米，Three.js 端无需缩放。
+
 |meshName|中文名称|可换色|分组|备注|
 |---|---|---|---|---|
 |body|车身主体|**是**|车身组|整车外皮，占比最大|
@@ -265,7 +275,7 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 
 |\#|验收项|通过标准|验证方式|
 |---|---|---|---|
-|C1|朝向|车头朝向 \-X，向上轴 \+Y（glTF 标准，Three 导入不歪斜）|导入 Three 后检查朝向|
+|C1|朝向|向上轴 \+Y（glTF 标准）；车头朝 \-X（本项目约定，与前端 partConfig 一致）|导入 Three 后检查朝向|
 |C2|原点|整车原点置于地面几何中心，位置/缩放/旋转已应用|Blender 属性面板核对|
 |C3|法线|全部朝外，无黑面；整体平滑着色|着色模式翻面检查|
 |C4|修改器|全部已应用，无残留镜像/细分/布尔依赖|Blender 修改器面板检查|
@@ -345,13 +355,14 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 |Base Color|color|前端拾色器控制，即换色核心字段|
 |Metallic|metalness|金属度，0\~1；车漆建议 0\.2\~0\.95|
 |Roughness|roughness|粗糙度，0\~1；亮光低值、哑光高值|
-|Transmission（车窗）|transmission|固定件玻璃使用，导出为透射扩展|
+|Alpha（车窗）|transparent \+ opacity|车窗用 alpha 混合（Base Color A≈0\.3，alphaMode BLEND）；禁用 Transmission 扩展（MeshStandardMaterial 不支持）|
 
 ## 10\.2 GLB 导出参数清单（前端约定）
 
 |参数|取值 / 要求|
 |---|---|
 |格式|glTF Binary \(\.glb\)，单文件|
+|输出路径|/home/qs/code2027/demo/doc\-agent/web\-3d\-Maybach/maybach\.glb（前端项目根目录）|
 |向上轴|\+Y（glTF 标准）|
 |前向|\-X（车头朝向）|
 |Draco 压缩|关闭（前端未集成解码器）|

@@ -10,6 +10,8 @@ import {
 } from 'naive-ui'
 import { GROUP_LABEL } from '@/config/partConfig'
 import { colorPresets, materialPresets, viewPresets } from '@/config/presets'
+import ColorPresetGroup from '@/components/panel/ColorPresetGroup'
+import ViewPresetButtons from '@/components/panel/ViewPresetButtons'
 import type { CarPartItem, PartGroup, RenderOption } from '@/types'
 
 const GROUPS: PartGroup[] = ['body', 'trim', 'wheel']
@@ -185,34 +187,15 @@ export default defineComponent({
 
         {/* 4. 内置预设配色（SRS FR05-01） */}
         <SectionTitle text="经典配色" />
-        <div class="grid grid-cols-2 gap-1">
-          {colorPresets.map((c) => (
-            <button
-              class="flex items-center gap-1.5 rounded border border-neutral-200 px-2 py-1.5 text-xs text-neutral-600 transition hover:border-brand-500 hover:text-brand-700"
-              onClick={() => props.onColorPreset(c)}
-            >
-              <span class="flex">
-                {[...new Set(Object.values(c.colors))].map((hex) => (
-                  <span
-                    class="h-3.5 w-3.5 rounded-full border border-white shadow"
-                    style={{ background: hex, marginLeft: '-4px' }}
-                  />
-                ))}
-              </span>
-              {c.name}
-            </button>
-          ))}
-        </div>
+        <ColorPresetGroup presets={colorPresets} onApply={(p) => props.onColorPreset(p)} />
 
         {/* 5. 快捷视角（SRS FR06） */}
         <SectionTitle text="预设视角" />
-        <div class="grid grid-cols-3 gap-1">
-          {viewPresets.map((v) => (
-            <NButton size="tiny" secondary onClick={() => props.onViewPreset(v.theta, v.phi)}>
-              {v.label}
-            </NButton>
-          ))}
-        </div>
+        <ViewPresetButtons
+          presets={viewPresets}
+          disabled={props.disabled}
+          onApply={(t, p) => props.onViewPreset(t, p)}
+        />
 
         {/* 6. 渲染设置（SRS FR08 / FR01-04） */}
         <SectionTitle text="渲染设置" />

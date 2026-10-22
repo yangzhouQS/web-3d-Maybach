@@ -49,6 +49,7 @@ export default defineComponent({
 
     const webglOk = ref(true)
     const viewerKey = ref(0)
+    const usingFallback = ref(false)
     const loadStatus = ref<'idle' | 'loading' | 'success' | 'error' | 'timeout'>('idle')
     const loadProgress = ref(0)
     const canvasHover = ref<string | null>(null)
@@ -201,7 +202,8 @@ export default defineComponent({
         onHoverChange: (name) => {
           canvasHover.value = name
         },
-        onLoadDone: () => {
+        onLoadDone: ({ fallback }) => {
+          usingFallback.value = fallback
           if (replaySnapshot) {
             // 上下文恢复后重放配色状态（SRS §2.4-8）
             model?.applyData(replaySnapshot)
@@ -303,6 +305,11 @@ export default defineComponent({
                   progress={loadProgress.value}
                   onRetry={() => model?.retry()}
                 />
+                {usingFallback.value && loadStatus.value === 'success' && (
+                  <div class="pointer-events-none absolute bottom-2 left-2 z-10 rounded bg-amber-500/90 px-2 py-1 text-xs text-white shadow">
+                    占位预览模型 · 等待正式 GLB（附录 A 规范）
+                  </div>
+                )}
               </>
             ) : (
               <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-neutral-500">

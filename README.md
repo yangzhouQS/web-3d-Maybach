@@ -14,12 +14,12 @@
 ```bash
 npm install
 npm run dev       # 开发（含 lil-gui 调试面板与 FPS/DrawCall 浮层）
-npm run typecheck # 类型检查
+npm run typecheck # 类型检查（TypeScript 锁定 ~5.9.x：TS7 与 vue-tsc 3.x 不兼容）
 npm run build     # 生产构建（产物 dist/，base 为相对路径，可部署任意子目录）
 npm run preview   # 本地预览生产构建
 ```
 
-> 首次运行若 `public/models/maybach.glb` 不存在，会自动加载程序化占位模型用于联调（可在 `src/config/modelConfig.ts` 关闭 `allowFallback`）。
+> 首次运行若 `public/models/maybach.glb` 不存在，会自动加载程序化占位模型（画布左下角显示标识），可在 `src/config/modelConfig.ts` 关闭。
 
 ## 模型替换 / 新增车型
 
@@ -70,5 +70,5 @@ public/models/            # GLB 模型放置处
 ## 已知限制
 
 - 车窗玻璃使用 MeshStandardMaterial 简化（无透射），二期迭代 MeshPhysicalMaterial（SRS 前置约束）
-- OutlinePass 呼吸动效简化为静态描边（选中蓝 / hover 琥珀），静止时不产生持续渲染开销
+- hover 呼吸高亮为限时脉冲（约 1.2s 后回归静态描边），避免驻留渲染破坏停帧原则
 - Draco 压缩 GLB 需自行接入 DRACOLoader 解码器配置
