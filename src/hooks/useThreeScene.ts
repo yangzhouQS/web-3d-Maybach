@@ -72,6 +72,8 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
   controls.enableDamping = true
   controls.dampingFactor = 0.08
   controls.autoRotateSpeed = 1.2
+  // 触摸适配：单指旋转、双指缩放平移（SRS FR01-02）
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }
   controls.maxPolarAngle = Math.PI / 2.02 // 不钻到地面以下
   controls.addEventListener('start', () => {
     // 用户交互时暂停自动旋转，结束恢复（SRS FR01-02）

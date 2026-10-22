@@ -18,6 +18,12 @@ body,
   touch-action: none;
 }
 
+/* lil-gui 调试面板避开顶部导航（仅开发环境挂载） */
+.lil-gui.root {
+  top: 52px;
+  right: 8px;
+}
+
 /* 侧面板滚动条细化 */
 .thin-scroll::-webkit-scrollbar {
   width: 5px;

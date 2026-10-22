@@ -13,6 +13,8 @@ import PartControlPanel from '@/components/PartControlPanel'
 import TopToolbar from '@/components/TopToolbar'
 import SchemeModal from '@/components/SchemeModal'
 import { useColorScheme } from '@/hooks/useColorScheme'
+import { setupDevPanel } from '@/hooks/useDevPanel'
+import DevStatsOverlay from '@/components/DevStatsOverlay'
 import type { ThreeScene } from '@/hooks/useThreeScene'
 import type { CarModel } from '@/hooks/useCarModel'
 import { createCarModel } from '@/hooks/useCarModel'
@@ -95,6 +97,12 @@ export default defineComponent({
     }
     onMounted(() => window.addEventListener('keydown', onKeyDown))
     onBeforeUnmount(() => window.removeEventListener('keydown', onKeyDown))
+
+    // 加载异常统一提示（SRS §7）
+    watch(loadStatus, (s) => {
+      if (s === 'error') message.error('模型加载失败，请检查模型资源地址，点击重试')
+      else if (s === 'timeout') message.error('加载时间过长，请检查网络后重试')
+    })
 
     // ---- 面板动作（统一入口：校验选中 → 应用 → 撤销入栈 → 提示）----
     const selectedNames = () => parts.filter((p) => p.selected && p.editable).map((p) => p.meshName)
@@ -198,11 +206,13 @@ export default defineComponent({
             // 上下文恢复后重放配色状态（SRS §2.4-8）
             model?.applyData(replaySnapshot)
             replaySnapshot = null
+            message.success('画布已恢复，配色状态已重放')
           }
           undo.reset(model!.snapshotData())
         },
       })
       model.applyOutline(renderOption.value.enableOutline)
+      setupDevPanel(three, renderOption)
       watch(model.status, (s) => (loadStatus.value = s))
       watch(model.progress, (p) => (loadProgress.value = p))
       loadStatus.value = model.status.value
@@ -269,10 +279,17 @@ export default defineComponent({
           <main class="canvas-area relative min-h-0 flex-1 bg-neutral-50">
             {webglOk.value ? (
               <>
+                <DevStatsOverlay
+                  getStats={() =>
+                    threeApi?.getStats() ?? { fps: 0, drawCalls: 0 }
+                  }
+                />
                 <MaybachViewer
                   key={viewerKey.value}
                   onReady={handleReady}
                   onContextLost={() => {
+                    // 上下文丢失：保存配色快照，整体重建画布（SRS §2.4-8）
+                    message.error('显卡驱动重置导致渲染中断，正在恢复…')
                     replaySnapshot = model?.snapshotData() ?? null
                     model?.dispose()
                     model = null

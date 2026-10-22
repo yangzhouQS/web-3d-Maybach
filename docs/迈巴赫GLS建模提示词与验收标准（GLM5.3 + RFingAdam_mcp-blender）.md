@@ -120,7 +120,7 @@ print(bpy.context.scene.name)
 
 ```text
 你现在通过 mcp-blender 工具远程控制 Blender ,/home/qs/tools/kilo/blender-5.2.3-linux-x64，任务是：从零创建一台迈巴赫GLS灰模，用于 Vue3+Three.js 网页独立部件换色项目，最终导出 GLB 文件。
-
+前端项目目录：/home/qs/code2027/demo/doc-agent/web-3d-Maybach，3d输出文件也希望这个作为根目录
 【第一步：清场】
 先清空当前场景：删除默认立方体、灯光、相机，确保从干净场景开始。
 
