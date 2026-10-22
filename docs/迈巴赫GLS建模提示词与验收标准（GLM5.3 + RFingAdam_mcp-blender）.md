@@ -225,7 +225,7 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 此表是 GLM 建模与前端代码的**唯一契约**，meshName 字段大小写敏感。可换色部件在前端面板开放取色器；固定部件置灰仅展示。
 
 > 契约补充（防验收误判）：
-> 1. V1.0 固定 17 部件——大灯/尾灯并入 bumper_front / bumper_rear，后门把手省略，排气口并入 bumper_rear。**禁止**为还原度添加第 18 个部件（A1 会判"多余"），也不要因灯具未单列而判"缺失"。
+> 1. **V1.1 固定 18 部件**——大灯/尾灯并入 bumper_front / bumper_rear，后门把手省略，排气口并入 bumper_rear；V1.1 新增 driver（驾驶员，含方向盘，可换色）且 window 开放换色（带透明度的玻璃色调）。**禁止**为还原度添加第 19 个部件（A1 会判"多余"），也不要因灯具未单列而判"缺失"。
 > 2. Blender 导出 glTF 以 **Object 名**命名节点：重命名必须改 Object 名（选中后 F2），仅改 Mesh 数据名无效。
 > 3. 建模单位 1=1 米（整车长 5.21m），导出 glTF 单位即为米，Three.js 端无需缩放。
 > 4. **前端实现差异（已裁定落地）**：曾存在前端将 wheel\_\*/mirror\_\* 等归并为单逻辑部件、window/tire 可换色的偏差，已按本契约修复——partConfig 拆分为 17 条独立条目（四轮毂/两后视镜/两保险杠/两把手均可独立换色），window/logo/tire 置灰（editable:false，验收 A4 通过）。占位模型与 e2e-smoke 断言同步更新；E2E 实测 17 行面板全显、左前轮毂独立选中、探针 nonEditable=\[window,logo,tire\]。
@@ -246,8 +246,9 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 |handle\_lf|左前门把手|**是**|外饰组|镀铬可选|
 |handle\_rf|右前门把手|**是**|外饰组|独立 Object|
 |trim|镀铬饰条|**是**|外饰组|车窗下沿、侧裙饰条|
-|window|车窗玻璃|否|固定件|开启透射材质|
-|logo|车标|否|固定件|迈巴赫双M立标/中网标|
+|window|车窗玻璃|**是**|外饰组|V1\.1 开放换色；alpha≈0\.3 BLEND + roughness 0\.03，透见驾驶员|
+|driver|驾驶员|**是**|车身组|V1\.1 新增；左前座低模人物\+方向盘，可整体换色|
+|logo|车标|否|固定件|三叉星辉立标（机盖前端）|
 |tire|轮胎橡胶|否|固定件|深色橡胶质感|
 
 # 6 验收标准（交付前端前逐项打勾）
@@ -258,10 +259,10 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 
 |\#|验收项|通过标准|验证方式|
 |---|---|---|---|
-|A1|部件数量|17 个部件全部存在，无缺失、无多余|GLM 用清单工具列大纲，人工比对第 5 章表|
+|A1|部件数量|18 个部件（V1\.1）全部存在，无缺失、无多余|GLM 用清单工具列大纲，人工比对第 5 章表|
 |A2|部件独立性|每个部件独立 Object / 独立 Mesh，无两个可换色部件合并|Blender 大纲逐个点选确认|
 |A3|命名规范|名称与前端 partConfig 完全一致，大小写敏感、无中文空格特殊符|导出后用脚本遍历 mesh\.name 核对|
-|A4|固定件标记|window / logo / tire 存在且前端按不可换色处理|前端面板检查三项置灰|
+|A4|固定件标记|logo / tire 存在且前端按不可换色处理（window、driver 自 V1\.1 起开放换色）|前端面板检查两项置灰|
 
 ## 6\.2 B 组：材质独立性与 PBR 适配（P0 硬性，防串色）
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { Tween, Easing, Group } from '@tweenjs/tween.js'
 import type { ModelConfig, RenderOption } from '@/types'
 
@@ -105,6 +106,14 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
   const fillLight = new THREE.DirectionalLight(0xdfe8ff, 0.7)
   fillLight.position.set(-7, 4, -6)
   scene.add(fillLight)
+
+  // 环境反射（SRS FR01-03）：RoomEnvironment 生成 PMREM 贴图，
+  // 为玻璃/车漆/镀铬提供反射来源；静态纹理零每帧开销，兼容事件驱动渲染
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  const envRT = pmrem.fromScene(new RoomEnvironment(), 0.04)
+  scene.environment = envRT.texture
+  if ('environmentIntensity' in scene) scene.environmentIntensity = 0.9
+  pmrem.dispose()
 
   // ---- 地面：阴影承接 + 网格辅助（SRS FR01-03 / FR01-04）----
   const ground = new THREE.Mesh(

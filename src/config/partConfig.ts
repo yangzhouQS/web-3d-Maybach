@@ -1,8 +1,9 @@
 import type { CarPartItem } from '@/types'
 
 /**
- * 部件配置表（SRS 附录 A / 建模文档 §5 命名契约，17 部件一一对应）
- * 可换色部件 editable=true；固定件（window/logo/tire）editable=false 面板置灰；
+ * 部件配置表（SRS 附录 A / 建模文档 §5 命名契约 V1.1，18 部件一一对应）
+ * 可换色部件 editable=true；固定件（logo/tire）editable=false 面板置灰；
+ * window 自 V1.1 起开放换色（带透明度的玻璃色调）；driver 为 V1.1 新增可换色件
  * 多实例 Mesh（tire 的 4 个轮胎、window 的 4 片玻璃）同名归并为一个逻辑部件
  */
 export const partConfig: CarPartItem[] = [
@@ -18,7 +19,8 @@ export const partConfig: CarPartItem[] = [
   { meshName: 'handle_lf', label: '左前门把手', group: 'trim', color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
   { meshName: 'handle_rf', label: '右前门把手', group: 'trim', color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
   { meshName: 'trim', label: '镀铬饰条', group: 'trim', color: '#bfa14a', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
-  { meshName: 'window', label: '车窗玻璃', group: 'trim', color: '#121418', metalness: 0.4, roughness: 0.05, selected: false, editable: false },
+  { meshName: 'window', label: '车窗玻璃', group: 'trim', color: '#0a0d14', metalness: 0.05, roughness: 0.03, selected: false, editable: true },
+  { meshName: 'driver', label: '驾驶员', group: 'body', color: '#847a72', metalness: 0.0, roughness: 0.85, selected: false, editable: true },
   { meshName: 'logo', label: '车标', group: 'trim', color: '#bfa14a', metalness: 1.0, roughness: 0.2, selected: false, editable: false },
   // ---- 轮毂组 ----
   { meshName: 'wheel_fl', label: '左前轮毂', group: 'wheel', color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true },
