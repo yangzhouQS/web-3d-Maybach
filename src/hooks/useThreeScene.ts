@@ -15,6 +15,10 @@ export interface ThreeScene {
   /** 相机动画组，由内部循环驱动 */
   readonly tweenGroup: Group
   requestRender(): void
+  /** 替换渲染管线（如 EffectComposer），传 null 恢复直接渲染 */
+  setCustomRender(fn: (() => void) | null): void
+  /** 注册尺寸变化监听（composer 等需要同步尺寸） */
+  addResizeListener(cb: (w: number, h: number) => void): void
   /** 按模型包围盒推导相机初始位与距离限制（SRS FR02-03） */
   fitFromBox(box: THREE.Box3, cam: ModelConfig['camera']): void
   /** 以当前 target 为中心，动画飞行到指定角度（度），可被打断（SRS FR06） */
@@ -112,12 +116,16 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
   scene.add(grid)
 
   // ---- 尺寸自适应（SRS FR01-01）----
+  let dirty = true
+  const resizeCbs = new Set<(w: number, h: number) => void>()
+  let customRender: (() => void) | null = null
   const resize = () => {
     const w = Math.max(container.clientWidth, 1)
     const h = Math.max(container.clientHeight, 1)
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    resizeCbs.forEach((cb) => cb(w, h))
     dirty = true
   }
   const ro = new ResizeObserver(resize)
@@ -126,7 +134,6 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
 
   // ---- 混合渲染循环（SRS §2.4-5）----
   // 阻尼/自转期间 controls.update() 返回 true；动画期间标志位为真；静止后仅在 dirty 时渲染
-  let dirty = true
   let cameraAnimating = false
   let disposed = false
   const tweenGroup = new Group()
@@ -140,7 +147,8 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
     const changed = controls.update()
     tweenGroup.update()
     if (changed || dirty || cameraAnimating) {
-      renderer.render(scene, camera)
+      if (customRender) customRender()
+      else renderer.render(scene, camera)
       dirty = false
       frames++
     }
@@ -213,6 +221,13 @@ export function createThreeScene(container: HTMLElement): ThreeScene {
     tweenGroup,
     requestRender: () => {
       dirty = true
+    },
+    setCustomRender(fn) {
+      customRender = fn
+      dirty = true
+    },
+    addResizeListener(cb) {
+      resizeCbs.add(cb)
     },
     fitFromBox(box, cam) {
       const size = box.getSize(new THREE.Vector3())
