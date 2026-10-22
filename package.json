@@ -12,6 +12,9 @@
   "engines": {
     "node": ">=20.19"
   },
+  "overrides": {
+    "braces": "^3.0.3"
+  },
   "dependencies": {
     "@tweenjs/tween.js": "^25.0.0",
     "naive-ui": "^2.45.3",

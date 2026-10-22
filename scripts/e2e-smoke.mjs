@@ -37,15 +37,19 @@ const results = {}
 results.webglErrorPage = await page.locator('text=当前浏览器不支持 WebGL').count()
 results.fallbackBadge = await page.locator('text=占位预览模型').count()
 
-// 部件面板行
-const expectParts = ['车身', '车顶', '中网', '轮毂', '轮胎', '后视镜', '保险杠', '门把手', '饰条', '车窗', '车标']
+// 部件面板行（契约 17 部件标签，SRS 附录 A）
+const expectParts = [
+  '车身主体', '车顶', '中网', '前保险杠', '后保险杠', '左后视镜壳', '右后视镜壳',
+  '左前门把手', '右前门把手', '镀铬饰条', '车窗玻璃', '车标',
+  '左前轮毂', '右前轮毂', '左后轮毂', '右后轮毂', '轮胎橡胶',
+]
 results.partRows = {}
 for (const p of expectParts) {
   results.partRows[p] = await page.locator(`text=${p}`).first().isVisible()
 }
 
-// 点选轮毂（面板行，精确到行 div 避免命中「轮毂组」标题）→ 选中态描边 + 复选框勾选断言
-const wheelRow = page.locator('aside div.cursor-pointer:has-text("轮毂")').first()
+// 点选左前轮毂（面板行，精确到行 div 避免命中「轮毂组」标题）→ 选中态描边 + 复选框勾选断言
+const wheelRow = page.locator('aside div.cursor-pointer:has-text("左前轮毂")').first()
 await wheelRow.click()
 await page.waitForTimeout(900)
 const wheelChecked = await wheelRow.locator('.n-checkbox--checked').count()

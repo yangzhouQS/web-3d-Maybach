@@ -1,45 +1,31 @@
 import type { CarPartItem } from '@/types'
 
 /**
- * 部件配置表（SRS 附录 A 命名契约）
- * 多实例部件（轮毂/后视镜/门把手等）由 matchPattern 正则归并为一个逻辑部件
+ * 部件配置表（SRS 附录 A / 建模文档 §5 命名契约，17 部件一一对应）
+ * 可换色部件 editable=true；固定件（window/logo/tire）editable=false 面板置灰；
+ * 多实例 Mesh（tire 的 4 个轮胎、window 的 4 片玻璃）同名归并为一个逻辑部件
  */
 export const partConfig: CarPartItem[] = [
-  { meshName: 'body', label: '车身', group: 'body', color: '#1a1a1e', metalness: 0.9, roughness: 0.15, selected: false, editable: true },
+  // ---- 车身组 ----
+  { meshName: 'body', label: '车身主体', group: 'body', color: '#1a1a1e', metalness: 0.9, roughness: 0.15, selected: false, editable: true },
   { meshName: 'roof', label: '车顶', group: 'body', color: '#1a1a1e', metalness: 0.9, roughness: 0.15, selected: false, editable: true },
+  // ---- 外饰组 ----
   { meshName: 'grille', label: '中网', group: 'trim', color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
-  {
-    meshName: 'wheel', matchPattern: /^wheel_/, label: '轮毂', group: 'wheel',
-    color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true,
-  },
-  {
-    meshName: 'tire', label: '轮胎', group: 'wheel',
-    color: '#151517', metalness: 0.1, roughness: 0.9, selected: false, editable: true,
-  },
-  {
-    meshName: 'mirror', matchPattern: /^mirror_/, label: '后视镜', group: 'trim',
-    color: '#1a1a1e', metalness: 0.9, roughness: 0.2, selected: false, editable: true,
-  },
-  {
-    meshName: 'bumper', matchPattern: /^bumper_/, label: '保险杠', group: 'trim',
-    color: '#232328', metalness: 0.8, roughness: 0.35, selected: false, editable: true,
-  },
-  {
-    meshName: 'handle', matchPattern: /^handle_/, label: '门把手', group: 'trim',
-    color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true,
-  },
-  {
-    meshName: 'trim', matchPattern: /^trim_/, label: '饰条', group: 'trim',
-    color: '#bfa14a', metalness: 0.95, roughness: 0.3, selected: false, editable: true,
-  },
-  {
-    meshName: 'window', matchPattern: /^window_/, label: '车窗', group: 'trim',
-    color: '#121418', metalness: 0.4, roughness: 0.05, selected: false, editable: true,
-  },
-  {
-    meshName: 'emblem', matchPattern: /^(emblem|logo)$/, label: '车标', group: 'trim',
-    color: '#bfa14a', metalness: 1.0, roughness: 0.2, selected: false, editable: false,
-  },
+  { meshName: 'bumper_front', label: '前保险杠', group: 'trim', color: '#232328', metalness: 0.8, roughness: 0.35, selected: false, editable: true },
+  { meshName: 'bumper_rear', label: '后保险杠', group: 'trim', color: '#232328', metalness: 0.8, roughness: 0.35, selected: false, editable: true },
+  { meshName: 'mirror_l', label: '左后视镜壳', group: 'trim', color: '#1a1a1e', metalness: 0.9, roughness: 0.2, selected: false, editable: true },
+  { meshName: 'mirror_r', label: '右后视镜壳', group: 'trim', color: '#1a1a1e', metalness: 0.9, roughness: 0.2, selected: false, editable: true },
+  { meshName: 'handle_lf', label: '左前门把手', group: 'trim', color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
+  { meshName: 'handle_rf', label: '右前门把手', group: 'trim', color: '#c9c9cf', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
+  { meshName: 'trim', label: '镀铬饰条', group: 'trim', color: '#bfa14a', metalness: 0.95, roughness: 0.3, selected: false, editable: true },
+  { meshName: 'window', label: '车窗玻璃', group: 'trim', color: '#121418', metalness: 0.4, roughness: 0.05, selected: false, editable: false },
+  { meshName: 'logo', label: '车标', group: 'trim', color: '#bfa14a', metalness: 1.0, roughness: 0.2, selected: false, editable: false },
+  // ---- 轮毂组 ----
+  { meshName: 'wheel_fl', label: '左前轮毂', group: 'wheel', color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true },
+  { meshName: 'wheel_fr', label: '右前轮毂', group: 'wheel', color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true },
+  { meshName: 'wheel_rl', label: '左后轮毂', group: 'wheel', color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true },
+  { meshName: 'wheel_rr', label: '右后轮毂', group: 'wheel', color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true },
+  { meshName: 'tire', label: '轮胎橡胶', group: 'wheel', color: '#151517', metalness: 0.1, roughness: 0.9, selected: false, editable: false },
 ]
 
 export const GROUP_LABEL: Record<string, string> = {

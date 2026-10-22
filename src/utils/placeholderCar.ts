@@ -68,11 +68,11 @@ export function buildPlaceholderCar(): THREE.Group {
   g.add(box('body', 4.9, 0.85, 2.0, 0, 0.8, 0))
   g.add(box('roof', 2.6, 0.62, 1.74, 0.2, 1.52, 0))
 
-  // 车窗
-  g.add(box('window_front', 0.08, 0.5, 1.66, -1.08, 1.5, 0))
-  g.add(box('window_rear', 0.08, 0.5, 1.66, 1.48, 1.5, 0))
-  g.add(box('window_left', 2.5, 0.5, 0.08, 0.2, 1.5, 0.87))
-  g.add(box('window_right', 2.5, 0.5, 0.08, 0.2, 1.5, -0.87))
+  // 车窗（4 片同名 Mesh 'window'，归并为一个固定件；exact 匹配）
+  g.add(box('window', 0.08, 0.5, 1.66, -1.08, 1.5, 0))
+  g.add(box('window', 0.08, 0.5, 1.66, 1.48, 1.5, 0))
+  g.add(box('window', 2.5, 0.5, 0.08, 0.2, 1.5, 0.87))
+  g.add(box('window', 2.5, 0.5, 0.08, 0.2, 1.5, -0.87))
 
   // 前脸与保险杠
   g.add(box('grille', 0.14, 0.55, 1.7, -2.47, 0.66, 0))
@@ -104,23 +104,21 @@ export function buildPlaceholderCar(): THREE.Group {
   g.add(box('mirror_l', 0.12, 0.12, 0.24, -1.0, 1.28, 1.06))
   g.add(box('mirror_r', 0.12, 0.12, 0.24, -1.0, 1.28, -1.06))
 
-  // 门把手（交付命名 handle_lf/handle_rf，占位用同风格）
+  // 门把手（契约仅前门把手 handle_lf/handle_rf）
   for (const [suffix, x, z] of [
     ['lf', -0.5, 1.02],
     ['rf', -0.5, -1.02],
-    ['lr', 0.4, 1.02],
-    ['rr', 0.4, -1.02],
   ] as const) {
     g.add(box(`handle_${suffix}`, 0.3, 0.08, 0.06, x, 1.16, z))
   }
 
-  // 侧饰条
-  g.add(box('trim_left', 3.4, 0.1, 0.07, 0, 0.36, 1.02))
-  g.add(box('trim_right', 3.4, 0.1, 0.07, 0, 0.36, -1.02))
+  // 侧饰条（两片同名 Mesh 'trim'，归并为镀铬饰条一个部件）
+  g.add(box('trim', 3.4, 0.1, 0.07, 0, 0.36, 1.02))
+  g.add(box('trim', 3.4, 0.1, 0.07, 0, 0.36, -1.02))
 
-  // 车标（不可编辑固定件，位置与交付模型一致：车头）
-  const emblem = cyl('emblem', 0.13, 0.05, -2.44, 1.1, 0, Math.PI / 2)
-  g.add(emblem)
+  // 车标（不可编辑固定件，位置与交付模型一致：车头三叉星立标）
+  const star = cyl('logo', 0.13, 0.05, -2.44, 1.1, 0, Math.PI / 2)
+  g.add(star)
 
   return g
 }
