@@ -6,7 +6,9 @@ import type { ModelConfig } from '@/types'
  */
 export const modelConfig: ModelConfig = {
   url: './models/maybach.glb',
-  orientation: 0,
+  // 交付模型长轴为 X、车头朝 -X（scripts/inspect-model.mjs 核定）；
+  // 旋转 π/2 使车头朝 +Z，与预设视角（正面=+Z）对齐
+  orientation: Math.PI / 2,
   allowFallback: true,
   camera: {
     initPhi: Math.PI / 3.1,
