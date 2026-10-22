@@ -11,6 +11,8 @@ import MaybachViewer from '@/components/MaybachViewer'
 import LoadingCover from '@/components/LoadingCover'
 import PartControlPanel from '@/components/PartControlPanel'
 import TopToolbar from '@/components/TopToolbar'
+import SchemeModal from '@/components/SchemeModal'
+import { useColorScheme } from '@/hooks/useColorScheme'
 import type { ThreeScene } from '@/hooks/useThreeScene'
 import type { CarModel } from '@/hooks/useCarModel'
 import { createCarModel } from '@/hooks/useCarModel'
@@ -48,6 +50,16 @@ export default defineComponent({
     const loadProgress = ref(0)
     const canvasHover = ref<string | null>(null)
     const lastSelected = ref<string | null>(null)
+    const showSchemes = ref(false)
+
+    // ---- 配色方案存储（SRS FR05）----
+    const schemeStore = useColorScheme()
+
+    const handleLoadScheme = (partsData: import('@/types').SchemePartData[]) => {
+      const r = model ? model.applyData(partsData) : { applied: 0, skipped: partsData.length }
+      pushUndo('schemeLoad')
+      return r
+    }
 
     const modelReady = computed(() => loadStatus.value === 'success')
 
@@ -224,7 +236,7 @@ export default defineComponent({
             }
             onResetAll={handleResetAll}
             onScreenshot={null}
-            onOpenSchemes={null}
+            onOpenSchemes={() => (showSchemes.value = true)}
           />
         </header>
 
@@ -278,6 +290,13 @@ export default defineComponent({
             )}
           </main>
         </div>
+
+        <SchemeModal
+          v-model:show={showSchemes.value}
+          store={schemeStore}
+          getCurrentData={() => model?.snapshotData() ?? []}
+          onLoadScheme={handleLoadScheme}
+        />
       </div>
     )
   },

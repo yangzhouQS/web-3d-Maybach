@@ -417,14 +417,16 @@ export function createCarModel(
     }
   }
 
-  // ---- 方案数据（SRS FR05）----
+  // ---- 方案数据（SRS FR05：仅可编辑部件参与保存/导出）----
   function snapshotData(): SchemePartData[] {
-    return parts.map((p) => ({
-      meshName: p.meshName,
-      color: p.color,
-      metalness: p.metalness,
-      roughness: p.roughness,
-    }))
+    return parts
+      .filter((p) => p.editable)
+      .map((p) => ({
+        meshName: p.meshName,
+        color: p.color,
+        metalness: p.metalness,
+        roughness: p.roughness,
+      }))
   }
 
   function applyData(list: SchemePartData[]): { applied: number; skipped: number } {
