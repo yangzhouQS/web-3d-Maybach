@@ -346,6 +346,12 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 
 3. **材质备注**：哪些部件带贴图、哪些为纯色车漆，供前端材质调节参考
 
+> 默认配色（V1\.1 起内置于 GLB 原始材质，前端"重置"即恢复）：Mercedes\-Maybach GLS 600 Manufaktur 标志性**黑金双色**——
+> 车身 黑曜石黑 Obsidian Black \#0c0f14（m0\.85/r0\.22）｜车顶·后视镜 卡拉哈里金 Kalahari Gold \#96805a（m0\.75/r0\.32）｜
+> 中网 黑铬 \#3a3d43｜保险杠 曜黑缎面 \#101318｜轮毂 钛灰锻造 \#63676e｜把手/饰条/车标 镀铬｜车窗 蓝灰隔热玻璃 \#1a222c（alpha 0\.32）｜
+> 轮胎 \#141414｜驾驶员 炭灰正装 \#454244。
+> 注：奔驰官方配置器与媒体站有反爬限制，车漆名取自公开资料通用译名（Obsidian Black/Kalahari Gold/Nautical Blue 等 Manufaktur 体系），色值为按漆面效果标定的近似值。
+
 4. **预览截图**：45° 前斜侧效果图，便于前端快速核对
 
 # 10 附录
