@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 画布容器禁止选中文本，避免拖拽误选 */
+.canvas-area {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* 侧面板滚动条细化 */
+.thin-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.18);
+}

@@ -1,10 +1,17 @@
 # Maybach 3D 部件换色预览系统 — 软件需求规格说明书（SRS）
 
-**文档版本：**V1\.0　　**技术栈：**Vue3 \+ Vite 8 \+ TSX \+ Three\.js　　**文档类型：**前端三维可视化项目需求文档
+**文档版本：**V1\.1　　**技术栈：**Vue3 \+ Vite 8 \+ TSX \+ Three\.js　　**文档类型：**前端三维可视化项目需求文档
 
 **适用对象：**开发、UI、测试
 
-**前置约束：**3D 模型为 GLB/GLTF 格式，Blender 预先拆分独立 Mesh，每个可换色部件拥有唯一 mesh\.name，材质类型为 MeshStandardMaterial。
+**修订记录：**
+
+|版本|日期|说明|
+|---|---|---|
+|V1\.0|2026-10-22|初稿|
+|V1\.1|2026-10-22|评审修订：多实例部件匹配（matchPattern）、画布点选与选中态 3D 反馈、撤销/重做、WebGL 异常兜底、方案重命名/覆盖保存、modelConfig 模型级配置、GLB 缓存策略、JS 体积预算、2x 高清截图、类型定义修正（group/matchPattern/createdAt/存储版本）、新增附录 A/B|
+
+**前置约束：**3D 模型为 GLB/GLTF 格式，Blender 预先拆分独立 Mesh，每个可换色部件拥有唯一 mesh\.name，材质类型为 MeshStandardMaterial。多实例部件（4 轮毂、2 后视镜等）使用方位后缀命名（wheel\_FL / wheel\_FR / wheel\_RL / wheel\_RR），前端通过 matchPattern 正则归并为一个逻辑部件联动换色（见 FR02\-02、附录 A）。车窗玻璃使用 MeshStandardMaterial 为一期已知简化，透射效果留待二期通过 MeshPhysicalMaterial transmission 迭代。
 
 # 1 引言
 
@@ -21,6 +28,10 @@
 - GLB 迈巴赫整车模型加载、三维场景渲染、轨道相机控制
 
 - 部件自动匹配、单选/多选部件实时换色
+
+- 画布点选部件（click\-to\-select）、选中态 3D 轮廓反馈
+
+- 撤销 / 重做（配色操作命令栈）
 
 - 车漆材质参数（金属度、粗糙度）调节
 
@@ -92,6 +103,8 @@
 
 - 网络：需要加载 GLB 模型资源；支持本地模型资源部署
 
+- 资源缓存：GLB 文件名携带内容哈希，配置强缓存响应头（Cache\-Control: max\-age=31536000, immutable），保障 15MB 模型重复访问不重新下载；HTML 入口文件不缓存，保障发版即时生效
+
 ## 2\.3 产品总体架构
 
 采用 **Vue3 \+ TSX 组件化 \+ 独立 Three Hooks** 分离架构：
@@ -118,9 +131,13 @@
 
 4. 所有配色数据保存在浏览器 LocalStorage，清除缓存会丢失方案；
 
-5. 渲染循环按需设计，不做无意义每帧遍历部件；
+5. 渲染循环采用混合策略：相机交互（阻尼生效期间）、自动旋转、视角动画期间连续渲染；场景完全静止后停止 rAF 循环按需渲染。任何情况下禁止每帧遍历部件集合，材质更新仅由修改事件驱动；
 
-6. 移动端自动降级：关闭阴影、关闭后处理轮廓，提升帧率。
+6. 移动端自动降级：关闭阴影、关闭后处理轮廓，提升帧率。降级判定标准：主指针为 coarse（matchMedia\('(pointer: coarse)'\) 命中）或 userAgent 匹配移动端，即按移动渲染档处理；
+
+7. Three\.js 对象（scene/camera/mesh/material）不得放入 Vue 深度响应式（reactive/ref），必须使用 shallowRef 或模块级原始引用，避免 Proxy 包装导致的性能损耗与 three 内部异常；
+
+8. 必须监听 webglcontextlost / webglcontextrestored：上下文丢失时停止渲染循环并提示刷新，恢复后重建 renderer 并重放当前配色状态。
 
 # 3 功能需求（FR）
 
@@ -174,7 +191,9 @@
 
 - 加载失败：展示错误提示，支持重试加载按钮
 
-- 加载超时提示
+- 加载超时阈值 30s：超时提示「加载时间过长，请检查网络后重试」，保留重试入口
+
+- 进度兜底：GLTFLoader progress 的 total 为 0（chunked 传输无法获知总大小时）展示不确定进度动画，不展示错误的百分比
 
 ## 3\.2 FR02：模型加载与部件解析模块
 
@@ -184,19 +203,27 @@
 
 ### FR02\-02 部件匹配规则
 
-- 前端内置部件配置数组 partConfig\[\]，每个配置项包含 meshName；
+- 前端内置部件配置数组 partConfig\[\]，每个配置项包含 meshName 与可选 matchPattern；
 
-- 遍历 Mesh，严格匹配 mesh\.name === partConfig\.meshName；
+- 匹配模式：默认 meshName 精确匹配（mesh\.name === meshName）；当提供 matchPattern（正则或正则数组）时按正则匹配 mesh\.name；
 
-- 匹配成功：绑定该 Mesh，纳入可换色部件列表；
+- **多实例部件归并：**同一配置项命中的多个 Mesh（如 wheel\_FL、wheel\_FR、wheel\_RL、wheel\_RR）归并为一个逻辑部件，列表中展示一行，换色 / 材质参数 / 选中状态全部联动；
 
-- 匹配失败：静默跳过，不纳入控制面板；
+- 匹配成功：绑定全部命中 Mesh，纳入可换色部件列表；
+
+- 匹配失败：跳过、不纳入控制面板；开发环境（import\.meta\.env\.DEV）console\.warn 输出未匹配 mesh 清单辅助联调，生产环境静默；
 
 - 标记 editable: false 的部件：仅展示，不开放颜色修改（例如车标、玻璃 LOGO 等固定件）。
 
 ### FR02\-03 部件初始化
 
-模型加载完成，读取 Mesh 原始材质颜色、metalness、roughness，回填到部件配置；作为该部件初始默认值。
+模型加载完成，读取 Mesh 原始材质颜色、metalness、roughness，回填到部件配置；作为该部件初始默认值。补充规则：
+
+- 多实例部件读取首个命中 Mesh 的原始参数作为默认值（同组实例的原始材质参数必须一致，见附录 A）；
+
+- 初始相机位置、minDistance / maxDistance、预设视角坐标均按模型包围盒（BoundingBox）尺寸与中心自动推导，不写死数值（见 §5 ModelConfig）；
+
+- 初始化完成后默认选中车身 body 部件，取色器加载即可用，避免用户首次操作无目标。
 
 **部件清单（示例，可扩展）：**body 车身、roof 车顶、grille 中网、wheel 轮毂、mirror 后视镜、bumper 保险杠、handle 门把手、trim 饰条、window 车窗。
 
@@ -230,6 +257,8 @@
 
 - 输入非法颜色值自动校验、提示
 
+- 多选编辑初始值：选中多个部件时，取色器与材质滑块显示最后选中部件的当前值，并轻提示「修改将统一应用到 N 个选中部件」；提交后统一生效
+
 ### FR03\-04 部件重置
 
 - 单个部件重置：恢复该部件模型原始材质参数
@@ -239,6 +268,34 @@
 ### FR03\-05（可选）部件 Hover 高亮
 
 鼠标 hover 模型 Mesh，通过 OutlinePass 轮廓高亮；同时在侧边面板自动定位并高亮对应部件行。默认关闭，可在设置面板开启，作为高级功能。
+
+### FR03\-06 画布点选部件（click\-to\-select）
+
+- 鼠标点击画布，Raycaster 命中 Mesh 后自动勾选对应逻辑部件：单击替换当前选中，Shift\+单击追加多选；
+
+- 命中 editable: false 部件：仅闪烁提示，不纳入选中；
+
+- 点击画布空白处：清空选中（可在设置面板关闭该行为）；
+
+- 双向联动：画布选中 → 侧边面板对应行滚动定位并高亮；面板勾选 → 画布中该部件显示选中态反馈（见 FR03\-07）。
+
+### FR03\-07 选中态 3D 反馈
+
+- 已选中部件常驻轮廓描边，与 FR03\-05 复用 OutlinePass 通道：选中态为常驻描边、hover 态为呼吸闪烁，两者视觉可区分；
+
+- OutlinePass 关闭（用户关闭或移动端降级）时的兜底方案：选中部件临时提升自发光（emissive）亮度作为标识；
+
+- 开启后处理时，截图与透明背景输出走 EffectComposer，需保证 alpha 通道正确（见 FR07\-02）。
+
+### FR03\-08 撤销 / 重做
+
+- 换色、材质参数修改、材质预设应用、配色方案加载、预设配色应用、重置等配色操作以命令模式入栈，支持撤销（Ctrl\+Z / Cmd\+Z）与重做（Ctrl\+Shift\+Z）；
+
+- 命令栈上限 30 步，超出丢弃最早记录；
+
+- 顶部工具栏提供撤销 / 重做按钮，无可撤销 / 重做操作时置灰；
+
+- 渲染配置类操作（背景、网格、阴影、自动旋转等开关）不入栈。
 
 ## 3\.4 FR04：材质参数调节模块
 
@@ -268,21 +325,25 @@
 
 弹窗内功能：
 
-1. **保存方案**：输入方案名称，将当前所有部件配置（颜色\+metalness\+roughness）保存为方案
+1. **保存方案**：输入方案名称，将当前全部可编辑部件配置（颜色\+metalness\+roughness）保存为方案；与已有方案同名时弹窗提示「覆盖保存 / 另存为新方案」
 
-2. **方案列表**：展示历史保存方案，点击加载整套配色
+2. **方案列表**：展示历史保存方案（名称、保存时间、部件数），点击加载整套配色
 
-3. **删除方案**：删除单条本地方案
+3. **方案重命名**：方案列表行内重命名，即时生效
 
-4. **导出 JSON**：导出当前整套配置为 \.json 文件下载
+4. **删除方案**：删除单条本地方案（二次确认）
 
-5. **导入 JSON**：上传本地配色 JSON，校验格式合法后一键应用整套配色
+5. **导出 JSON**：导出当前整套配置为 \.json 文件下载
 
-6. **存储介质**：LocalStorage，key 固定，JSON 序列化存储
+6. **导入 JSON / 加载方案**：上传本地配色 JSON 或点击加载历史方案时，逐条校验 meshName 与当前模型部件的匹配情况；不存在的部件跳过并提示「部分部件在当前模型不存在，已跳过」（换车型后加载旧方案同样走此规则）
+
+7. **应用范围**：内置预设配色仅覆盖当前**选中部件**（无选中时提示先选择部件）；导入 JSON 与加载方案覆盖**全部可编辑部件**——两套语义在 UI 文案上明示，避免误解
+
+8. **存储介质**：LocalStorage，key 固定（maybach\-color\-schemes），JSON 序列化存储；存储结构携带 schemaVersion 字段用于后续格式迁移；仅序列化 meshName / color / metalness / roughness 四个纯数据字段，不存储 selected、editable 等 UI 运行态
 
 ### FR05\-03 JSON 结构校验
 
-导入 JSON 时校验字段完整性，格式错误给出友好提示，不崩溃。
+导入 JSON 时逐项校验：version 字段存在且为 "1\.0"；parts 为数组；每项 meshName 为非空字符串、color 匹配 /\^#\[0\-9a\-fA\-F\]\{6\}\$/、metalness / roughness 为 0~1 区间内数值。任一项不合法即整体拒绝并给出友好提示，不部分应用、不崩溃。
 
 ## 3\.6 FR06：预设视角与相机动画模块
 
@@ -302,21 +363,25 @@
 
 - 动画过程控制器临时禁用交互，动画结束恢复
 
+- 动画进行中再次点击任意视角按钮：立即中止旧 Tween，以当前相机位置为起点启动新动画，不做排队等待
+
 - 相机 target 保持指向模型中心，只修改 position
+
+- 所有预设视角（含初始机位）坐标由模型包围盒推导，不硬编码；额外提供**默认视角**按钮，恢复模型加载后的初始机位
 
 ## 3\.7 FR07：截图导出模块
 
 ### FR07\-01 截图触发
 
-点击截图按钮：临时隐藏 UI 面板，读取 renderer 画布像素，生成图片。
+点击截图按钮，读取 renderer 画布像素生成图片并下载。截图仅捕获 WebGL canvas 像素，DOM 面板不在画面内、无需隐藏。**技术前提：**renderer 创建时设置 preserveDrawingBuffer: true，或在截图前同步调用一次 renderer\.render\(\) 再读取像素，否则画布内容为黑色。
 
 ### FR07\-02 截图配置
 
-跟随当前画布背景设置：支持透明背景 PNG 截图。
+跟随当前画布背景设置：支持透明背景 PNG 截图（要求 renderer alpha: true；开启后处理时走 EffectComposer 输出并保留 alpha 通道）。提供分辨率选项：1x 当前画布尺寸 / 2x 高清导出（临时按 2 倍尺寸渲染后导出，用于运营宣传图）。
 
 ### FR07\-03 下载
 
-自动触发浏览器下载，文件名默认 maybach\-color\-yyyymmdd\.png。
+自动触发浏览器下载，文件名默认 maybach\-color\-yyyymmdd\-HHmmss\.png。
 
 ## 3\.8 FR08：辅助工具模块
 
@@ -340,13 +405,17 @@
 
 5. 限制：禁止每帧循环遍历所有部件，材质更新仅在修改事件触发时执行
 
+6. 体积预算：首屏 JS（gzip 后）≤ 500KB；NaiveUI 按需引入，three\.js 依赖分割；lil\-gui 与性能统计仅开发环境打包，生产构建移除
+
 ## 4\.2 兼容性需求
 
 - PC 主流现代浏览器；不支持 IE
 
 - 移动端触摸交互可用，自动降级阴影、后处理
 
-- 高 DPI 屏幕：renderer 像素比适配 window\.devicePixelRatio，画面清晰
+- 高 DPI 屏幕：renderer 像素比适配 window\.devicePixelRatio，同时 clamp 上限为 2（防止 3x/4x 屏填充率暴涨导致掉帧），画面清晰
+
+- 移动端降级判定：主指针 coarse 或 UA 命中移动端 → 自动关闭阴影与后处理轮廓，与 §2\.4 约束 6 保持一致
 
 ## 4\.3 安全性需求
 
@@ -374,26 +443,52 @@
 
 4. 环境区分：开发环境开启 lil\-gui 调试面板、性能统计；生产环境移除
 
+5. 模型替换 SOP：替换车型仅需替换 GLB 文件 \+ 更新 modelConfig / partConfig，业务代码零改动；操作步骤与命名规范以附录 A 为交付依据
+
 # 5 数据模型与 TS 类型定义
 
 ```typescript
+/** 部件分组（侧边面板折叠分组依据） */
+type PartGroup = 'body' | 'trim' | 'wheel';
+
 /** 单车辆可换色部件 */
 interface CarPartItem {
-  meshName: string;    // 和 GLB Mesh.name 严格匹配
-  label: string;       // 前端展示中文名称
-  color: string;        // hex #ffffff
+  meshName: string;               // 精确匹配 GLB Mesh.name
+  matchPattern?: RegExp | RegExp[]; // 多实例部件正则匹配（如 /^wheel_/），命中多个 Mesh 归并为一个逻辑部件
+  label: string;                  // 前端展示中文名称
+  group: PartGroup;               // 所属分组：车身组 / 外饰组 / 轮毂组
+  color: string;                  // hex #ffffff
   metalness: number;
   roughness: number;
-  selected: boolean;
-  editable: boolean;    // false=禁止修改颜色
+  selected: boolean;              // UI 运行态，不参与序列化
+  editable: boolean;              // false=禁止修改颜色
 }
 
 /** 一套配色方案 */
 interface ColorScheme {
   id: string;           // uuid
-  name: string;        // 用户命名
-  parts: CarPartItem[];
-  createAt: number;     // timestamp
+  name: string;         // 用户命名
+  createdAt: number;    // timestamp（V1.1 修正拼写：createAt → createdAt）
+  parts: Array<Pick<CarPartItem, 'meshName' | 'color' | 'metalness' | 'roughness'>>; // 仅纯数据，不含 UI 运行态
+}
+
+/** LocalStorage 存储结构 */
+interface SchemeStorage {
+  schemaVersion: '1.0'; // 格式版本，用于后续结构迁移
+  schemes: ColorScheme[];
+}
+
+/** 模型级配置（车型替换只需更换 GLB + 本配置） */
+interface ModelConfig {
+  url: string;           // GLB 资源地址
+  orientation: number;   // 车头朝向修正角（绕 Y 轴弧度），与附录 A 导出朝向一致
+  camera: {              // 相机参数按包围盒尺寸推导，不写死绝对值
+    initPhi: number;       // 初始极角（弧度）
+    initTheta: number;     // 初始方位角（弧度）
+    distanceRatio: number; // 初始距离 = 包围盒对角线 × 该系数
+    minDistanceRatio: number;
+    maxDistanceRatio: number;
+  };
 }
 
 /** 全局渲染配置 */
@@ -430,7 +525,7 @@ interface ExportColorJson {
 
     - 下方：折叠控制面板
 
-- **顶部通栏导航**：标题、操作按钮组（自动旋转、截图、重置全部、配色方案）
+- **顶部通栏导航**：标题、操作按钮组（撤销 / 重做、自动旋转、截图、重置全部、配色方案）；小屏下收纳进「更多」下拉，避免挤压画布
 
 ## 6\.2 左侧控制面板内容顺序
 
@@ -456,6 +551,8 @@ interface ExportColorJson {
 
 4. 弹窗关闭：点击遮罩或取消按钮关闭
 
+5. 画布点选与面板勾选双向联动（FR03\-06）；多选部件参数不一致时，取色器与滑块以最后选中部件值显示并提示「将统一应用」
+
 # 7 错误处理与提示规范
 
 |场景|提示级别|文案示例|
@@ -466,6 +563,9 @@ interface ExportColorJson {
 |截图成功|Success|截图已开始下载|
 |方案保存成功|Success|配色方案保存成功|
 |非法颜色输入|Warning|颜色格式不正确，请输入合法 HEX 色值|
+|WebGL 不可用|Error|当前浏览器不支持 WebGL，请使用 Chrome/Edge ≥110 或 Safari ≥16|
+|WebGL 上下文丢失|Error|显卡驱动重置导致渲染中断，请刷新页面重试|
+|加载方案部件缺失|Warning|部分部件在当前模型不存在，已跳过|
 
 # 8 测试要点
 
@@ -489,6 +589,16 @@ interface ExportColorJson {
 
 10. 降级：关闭阴影、关闭轮廓后功能正常
 
+11. 异常兜底：禁用 WebGL 的浏览器给出错误页；模拟 webglcontextlost 后停止渲染并提示，恢复后配色状态不丢失
+
+12. 撤销 / 重做：连续换色、批量操作、加载方案后逐步回退与前进，栈上限行为正常
+
+13. 画布点选：单击选中、Shift 追加、点击空白清空、不可编辑部件拦截、面板与画布双向联动
+
+14. 多选不同色部件编辑：初始值显示规则与统一应用行为
+
+15. 高分屏：devicePixelRatio = 3 的设备 clamp 至 2 后，帧率与清晰度符合指标
+
 # 9 二期可选迭代需求（V2\.0）
 
 1. 自定义车漆 Shader：珠光、金属细闪、渐变双色车漆
@@ -511,12 +621,64 @@ interface ExportColorJson {
 
 **最高风险：3D 模型资源**
 
-如果模型没有拆分独立 Mesh，本项目核心换色功能无法实现；交付前必须确认 Blender 导出规范。
+如果模型没有拆分独立 Mesh，本项目核心换色功能无法实现；交付前必须按附录 A 规范验收模型。
 
 - 模型面数过高：会导致卡顿，需要提前减面、压缩 GLB（glTF\-Pipeline）
 
 - 浏览器 GPU 性能差异：低配移动端设备帧率会下降，已经设计自动降级策略
 
 - 纹理资源：GLB 内嵌纹理过大同样会拖慢加载，建议合并压缩纹理
+
+# 附录 A：Blender 模型导出规范（模型交付验收依据）
+
+本附录为 §10 最高风险项的配套交付规范，模型交付前逐项核对，签字确认。
+
+## A1 Mesh 拆分与命名清单
+
+1. 每个可换色部件拆分为独立 Mesh，禁止与其他部件合并网格；
+
+2. 命名规则：语义名\_方位后缀；多实例部件后缀固定为 \_FL（左前）、\_FR（右前）、\_RL（左后）、\_RR（右后）；
+
+3. 同一逻辑部件的多个实例（4 轮毂、2 后视镜等）原始材质参数（color / metalness / roughness）必须一致；
+
+4. 命名清单为前后端唯一契约，前端 partConfig 的 meshName / matchPattern 与之一一对应：
+
+|逻辑部件|mesh 命名|matchPattern|分组|editable|
+|---|---|---|---|---|
+|车身|body|—|body|true|
+|车顶|roof|—|body|true|
+|中网|grille|—|trim|true|
+|轮毂|wheel_FL / wheel_FR / wheel_RL / wheel_RR|/\^wheel\_/|wheel|true|
+|后视镜|mirror_FL / mirror_FR|/\^mirror\_/|trim|true|
+|保险杠|bumper_front / bumper_rear|/\^bumper\_/|trim|true|
+|门把手|handle_FL / handle_FR / handle_RL / handle_RR|/\^handle\_/|trim|true|
+|饰条|trim\_\*（按实际数量编号）|/\^trim\_/|trim|true|
+|车窗|window\_\*（按实际数量编号）|/\^window\_/|trim|true|
+|车标|emblem|—|trim|false|
+
+（实际车型交付时以建模方确认版清单更新此表）
+
+## A2 导出设置
+
+1. 导出格式 glTF 2\.0（\.glb 二进制）；
+
+2. 单位为米（m），模型置于原点，车头朝向（\-Z 或 \+Z）需在交付说明中注明，前端通过 modelConfig\.orientation 修正；
+
+3. 材质仅使用 MeshStandardMaterial（Blender Principled BSDF），可换色部件 Base Color 使用纯色、不依赖贴图（颜色以代码覆盖为主）；
+
+4. 资源预算：GLB 总体积 ≤ 15MB、整车面数 ≤ 30 万三角、单张纹理 ≤ 2048×2048；超预算需减面或压缩（glTF\-Pipeline，Draco 压缩可选）；
+
+5. 交付物：\.glb 文件 \+ A1 命名清单确认表。
+
+# 附录 B：目标设备测试矩阵
+
+|档位|设备 / 环境|验证重点|
+|---|---|---|
+|PC 高配|Chrome ≥110、Edge ≥110，独立显卡|全功能开启（阴影 \+ 轮廓）帧率 ≥45FPS|
+|PC 集显|Safari ≥16、核显轻薄本|帧率 ≥45FPS、长时间操作内存无持续上涨|
+|平板|iPad Safari、主流安卓平板|上下布局、触摸单指旋转 / 双指缩放平移|
+|移动高端|近两年旗舰安卓 / iOS|降级档（无阴影 / 无轮廓）≥30FPS、DPR clamp 生效|
+|移动低端|中低端安卓（2\~3 年前机型）|加载进度可见、降级档可交互、不崩溃|
+|异常环境|禁用 WebGL 的浏览器、弱网（Slow 3G）|WebGL 错误页、超时提示、重试、不确定进度条|
 
 > （注：部分内容由豆包工作 AI 生成）
