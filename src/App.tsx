@@ -194,6 +194,21 @@ export default defineComponent({
         return
       }
       threeApi = three
+      if (import.meta.env.DEV) {
+        // E2E/调试探针：暴露运行态（仅开发环境）
+        ;(window as unknown as Record<string, unknown>).__MAYBACH__ = {
+          parts,
+          get three() {
+            return threeApi
+          },
+          get model() {
+            return model
+          },
+          get loadStatus() {
+            return loadStatus.value
+          },
+        }
+      }
       three.applyRenderOptions(renderOption.value)
       model = createCarModel(three, parts, {
         onSelectionChange: (_names, last) => {

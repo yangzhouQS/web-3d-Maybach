@@ -13,15 +13,17 @@ let destroyPrev: (() => void) | null = null
  * - pointer capture 跟随，边界钳制不出视口
  * - 拖拽超过阈值时吞掉 click，避免误触发 lil-gui 自带的折叠
  */
-function makeDraggable(gui: { domElement: HTMLElement }): void {
+function makeDraggable(gui: { domElement: HTMLElement }): () => void {
   const el = gui.domElement
   const title = el.querySelector<HTMLElement>('.title')
-  if (!title) return
+  if (!title) return () => {}
 
   el.style.position = 'fixed'
+  // 确定性初始位置：右上、避开顶部导航与工具栏（按钮集中在右侧）
+  const width = 200
   el.style.top = '60px'
+  el.style.left = `${Math.max(window.innerWidth - width - 16, 16)}px`
   el.style.right = 'auto'
-  el.style.left = 'auto'
   el.style.zIndex = '1001'
   title.style.cursor = 'move'
   title.style.touchAction = 'none'
@@ -71,6 +73,23 @@ function makeDraggable(gui: { domElement: HTMLElement }): void {
   title.addEventListener('pointerup', onUp)
   title.addEventListener('pointercancel', onUp)
   title.addEventListener('click', onClickCapture, true)
+
+  // ` 键盘快捷键切换面板显隐（开发环境）
+  const onKeydown = (e: KeyboardEvent) => {
+    if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      el.style.display = el.style.display === 'none' ? '' : 'none'
+    }
+  }
+  window.addEventListener('keydown', onKeydown)
+
+  return () => {
+    title.removeEventListener('pointerdown', onDown)
+    title.removeEventListener('pointermove', onMove)
+    title.removeEventListener('pointerup', onUp)
+    title.removeEventListener('pointercancel', onUp)
+    title.removeEventListener('click', onClickCapture, true)
+    window.removeEventListener('keydown', onKeydown)
+  }
 }
 
 export function setupDevPanel(three: ThreeScene, renderOption: Ref<RenderOption>): void {
@@ -112,7 +131,10 @@ export function setupDevPanel(three: ThreeScene, renderOption: Ref<RenderOption>
         'defaultView',
       )
       .name('默认视角')
-    makeDraggable(gui)
-    destroyPrev = () => gui.destroy()
+    const teardownDrag = makeDraggable(gui)
+    destroyPrev = () => {
+      teardownDrag()
+      gui.destroy()
+    }
   })
 }

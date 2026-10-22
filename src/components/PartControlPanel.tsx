@@ -88,36 +88,45 @@ export default defineComponent({
         </div>
         <NCollapse v-model:expanded-names={expandedGroups.value} class="mt-1" display-directive="show">
           {GROUPS.map((g) => (
-            <NCollapseItem title={GROUP_LABEL[g]} name={g}>
-              {props.parts
-                .filter((p) => p.group === g)
-                .map((p) => (
-                  <div
-                    ref={(el) => {
-                      if (el instanceof HTMLDivElement) rowRefs.set(p.meshName, el)
-                    }}
-                    class={rowClass(p)}
-                    onClick={() => props.onSelectPart(p.meshName, false)}
-                    onMouseenter={() => p.editable && props.onHoverPart(p.meshName)}
-                    onMouseleave={() => props.onHoverPart(null)}
-                  >
-                    <span onClick={(e: MouseEvent) => e.stopPropagation()}>
-                      <NCheckbox
-                        checked={p.selected}
-                        disabled={!p.editable}
-                        onUpdateChecked={(v: boolean) => {
-                          if (v !== p.selected) props.onSelectPart(p.meshName, true)
+            <NCollapseItem key={g} title={GROUP_LABEL[g]} name={g}>
+              {{
+                // 必须用槽函数：JSX 直接子元素会被包成静态快照导致选中态不更新
+                default: () =>
+                  props.parts
+                    .filter((p) => p.group === g)
+                    .map((p) => (
+                      <div
+                        key={p.meshName}
+                        ref={(el) => {
+                          if (el instanceof HTMLDivElement) rowRefs.set(p.meshName, el)
                         }}
-                      />
-                    </span>
-                    <span
-                      class="h-4 w-4 shrink-0 rounded border border-neutral-300"
-                      style={{ background: p.color }}
-                    />
-                    <span class={p.editable ? 'text-neutral-700' : 'text-neutral-400'}>{p.label}</span>
-                    {!p.editable && <span class="ml-auto text-[10px] text-neutral-400">固定件</span>}
-                  </div>
-                ))}
+                        class={rowClass(p)}
+                        onClick={() => props.onSelectPart(p.meshName, false)}
+                        onMouseenter={() => p.editable && props.onHoverPart(p.meshName)}
+                        onMouseleave={() => props.onHoverPart(null)}
+                      >
+                        <span onClick={(e: MouseEvent) => e.stopPropagation()}>
+                          <NCheckbox
+                            checked={p.selected}
+                            disabled={!p.editable}
+                            onUpdateChecked={(v: boolean) => {
+                              if (v !== p.selected) props.onSelectPart(p.meshName, true)
+                            }}
+                          />
+                        </span>
+                        <span
+                          class="h-4 w-4 shrink-0 rounded border border-neutral-300"
+                          style={{ background: p.color }}
+                        />
+                        <span class={p.editable ? 'text-neutral-700' : 'text-neutral-400'}>
+                          {p.label}
+                        </span>
+                        {!p.editable && (
+                          <span class="ml-auto text-[10px] text-neutral-400">固定件</span>
+                        )}
+                      </div>
+                    )),
+              }}
             </NCollapseItem>
           ))}
         </NCollapse>

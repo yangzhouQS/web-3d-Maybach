@@ -228,6 +228,7 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 > 1. V1.0 固定 17 部件——大灯/尾灯并入 bumper_front / bumper_rear，后门把手省略，排气口并入 bumper_rear。**禁止**为还原度添加第 18 个部件（A1 会判"多余"），也不要因灯具未单列而判"缺失"。
 > 2. Blender 导出 glTF 以 **Object 名**命名节点：重命名必须改 Object 名（选中后 F2），仅改 Mesh 数据名无效。
 > 3. 建模单位 1=1 米（整车长 5.21m），导出 glTF 单位即为米，Three.js 端无需缩放。
+> 4. **前端实际实现差异（待裁定）**：前端 partConfig（src/config/partConfig\.ts）将 wheel\_\*/mirror\_\*/bumper\_\*/handle\_\* 用 matchPattern 归并为单逻辑部件，并将 window/tire 设为 editable:true。与本文 §5 契约（四轮毂独立换色、window/logo/tire 置灰）冲突。需产品裁定：改前端 partConfig（拆分为 17 条独立条目、window/tire 改 editable:false），或修订本契约以追认前端实现。模型侧两种方案均兼容（mesh 级 17 名不受影响）。
 
 |meshName|中文名称|可换色|分组|备注|
 |---|---|---|---|---|
@@ -371,3 +372,5 @@ body / roof / grille / bumper_front / bumper_rear / mirror_l / mirror_r / wheel_
 |三角面数|≤25万|
 
 > （注：部分内容由豆包工作 AI 生成）
+
+> **前端接入备忘（commit 317011f）**：GLB 文件保持 \-X 前向不变；前端加载时以 `modelConfig.orientation = π/2` 将车头旋至 \+Z 对齐预设视角（正面=\+Z）。朝向修正只在前端做，**禁止两端同时改**，否则双重旋转 180°。最新模型核验：17/17 部件、6936 tris、车头 \-X、左侧 \+Z，与 `node scripts/inspect-model.mjs` 复核一致。
