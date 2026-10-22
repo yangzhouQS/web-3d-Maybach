@@ -20,6 +20,7 @@ node scripts/e2e-smoke.mjs http://localhost:5199
 - **TypeScript 锁定 `~5.9.3`**：TS 7（原生版）与 vue-tsc 3.x 不兼容
 - Node ≥ 20.19（Vite 8 要求）；registry 走 npmmirror
 - TailwindCSS 锁 v3；lil-gui 仅动态 import（`import.meta.env.DEV` 守卫），生产包不得引入
+- **已知接受风险**：Dependabot 告警 tailwindcss@3 构建链（chokidar/fast-glob/braces 栈耗尽 DoS）——均为 dev 依赖、不进生产产物、不可达路径；官方修复需升级 Tailwind v4（破坏性），已用 `overrides.braces@^3.0.3` 缓解，**勿执行 `npm audit fix --force`**
 
 ## 架构分层
 
