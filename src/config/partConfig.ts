@@ -13,6 +13,10 @@ export const partConfig: CarPartItem[] = [
     color: '#d8d8dc', metalness: 0.95, roughness: 0.25, selected: false, editable: true,
   },
   {
+    meshName: 'tire', label: '轮胎', group: 'wheel',
+    color: '#151517', metalness: 0.1, roughness: 0.9, selected: false, editable: true,
+  },
+  {
     meshName: 'mirror', matchPattern: /^mirror_/, label: '后视镜', group: 'trim',
     color: '#1a1a1e', metalness: 0.9, roughness: 0.2, selected: false, editable: true,
   },
@@ -32,7 +36,10 @@ export const partConfig: CarPartItem[] = [
     meshName: 'window', matchPattern: /^window_/, label: '车窗', group: 'trim',
     color: '#121418', metalness: 0.4, roughness: 0.05, selected: false, editable: true,
   },
-  { meshName: 'emblem', label: '车标', group: 'trim', color: '#bfa14a', metalness: 1.0, roughness: 0.2, selected: false, editable: false },
+  {
+    meshName: 'emblem', matchPattern: /^(emblem|logo)$/, label: '车标', group: 'trim',
+    color: '#bfa14a', metalness: 1.0, roughness: 0.2, selected: false, editable: false,
+  },
 ]
 
 export const GROUP_LABEL: Record<string, string> = {

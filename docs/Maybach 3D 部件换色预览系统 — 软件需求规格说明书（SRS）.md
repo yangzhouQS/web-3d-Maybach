@@ -648,13 +648,14 @@ interface ExportColorJson {
 |车身|body|—|body|true|
 |车顶|roof|—|body|true|
 |中网|grille|—|trim|true|
-|轮毂|wheel_FL / wheel_FR / wheel_RL / wheel_RR|/\^wheel\_/|wheel|true|
+|轮毂|wheel_FL / wheel_FR / wheel_RL / wheel_RR（实际交付：wheel_fl/fr/rl/rr）|/\^wheel\_/|wheel|true|
+|轮胎|tire（实际交付新增）|—|wheel|true|
 |后视镜|mirror_FL / mirror_FR|/\^mirror\_/|trim|true|
 |保险杠|bumper_front / bumper_rear|/\^bumper\_/|trim|true|
 |门把手|handle_FL / handle_FR / handle_RL / handle_RR|/\^handle\_/|trim|true|
 |饰条|trim\_\*（按实际数量编号）|/\^trim\_/|trim|true|
 |车窗|window\_\*（按实际数量编号）|/\^window\_/|trim|true|
-|车标|emblem|—|trim|false|
+|车标|emblem（实际交付：logo）|/\^(emblem\|logo)\$/|trim|false|
 
 （实际车型交付时以建模方确认版清单更新此表）
 
