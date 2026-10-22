@@ -15,8 +15,8 @@ const LOAD_TIMEOUT_MS = 30_000
 const CLICK_DRIFT_PX = 6
 
 export interface CarModelCallbacks {
-  /** 选中集合变化（config.meshName 列表） */
-  onSelectionChange?: (meshNames: string[]) => void
+  /** 选中集合变化；last 为本次最后选中的部件（SRS FR03-03 多选初始值） */
+  onSelectionChange?: (meshNames: string[], last?: string) => void
   /** hover 部件变化（画布 → 面板定位，SRS FR03-06） */
   onHoverChange?: (meshName: string | null) => void
   /** 模型加载完成（含占位模型兜底） */
@@ -29,7 +29,7 @@ export interface CarModel {
   progress: Ref<number>
   retry(): void
   dispose(): void
-  setSelection(meshNames: string[]): void
+  setSelection(meshNames: string[], last?: string): void
   toggleSelection(meshName: string): void
   clearSelection(): void
   getSelected(): CarPartItem[]
@@ -271,10 +271,11 @@ export function createCarModel(
     three.requestRender()
   }
 
-  function setSelection(meshNames: string[]): void {
+  function setSelection(meshNames: string[], last?: string): void {
     parts.forEach((p) => (p.selected = meshNames.includes(p.meshName) && p.editable))
     refreshSelectionFeedback()
-    cb.onSelectionChange?.(parts.filter((p) => p.selected).map((p) => p.meshName))
+    const selected = parts.filter((p) => p.selected).map((p) => p.meshName)
+    cb.onSelectionChange?.(selected, last ?? selected[selected.length - 1])
   }
 
   function toggleSelection(meshName: string): void {
@@ -341,7 +342,7 @@ export function createCarModel(
       return
     }
     if (e.shiftKey) toggleSelection(name)
-    else setSelection([name])
+    else setSelection([name], name)
   }
 
   const onPointerMove = (e: PointerEvent) => {
