@@ -1,9 +1,34 @@
 import { defineComponent, ref } from 'vue'
+import MaybachViewer from '@/components/MaybachViewer'
+import type { ThreeScene } from '@/hooks/useThreeScene'
+import type { RenderOption } from '@/types'
+import { isMobileDevice } from '@/utils/device'
+
+const isMobile = isMobileDevice()
 
 export default defineComponent({
   name: 'App',
   setup() {
-    const canvasMounted = ref(false)
+    const renderOption = ref<RenderOption>({
+      autoRotate: false,
+      showGrid: true,
+      // 移动端自动降级：默认关闭阴影与后处理轮廓（SRS §2.4-6）
+      showShadow: !isMobile,
+      bgColor: '#f3f4f6',
+      transparentBg: false,
+      enableOutline: !isMobile,
+    })
+    const webglOk = ref(true)
+    const viewerKey = ref(0)
+
+    const handleReady = (three: ThreeScene | null) => {
+      if (!three) {
+        webglOk.value = false
+        return
+      }
+      three.applyRenderOptions(renderOption.value)
+    }
+
     return () => (
       <div class="flex h-full w-full flex-col bg-neutral-100">
         {/* 顶部通栏导航 */}
@@ -28,9 +53,19 @@ export default defineComponent({
 
           {/* 右侧 3D 画布区域 */}
           <main class="canvas-area relative min-h-0 flex-1 bg-neutral-50">
-            {canvasMounted.value ? null : (
-              <div class="absolute inset-0 flex items-center justify-center text-sm text-neutral-400">
-                3D 画布（阶段 2 接入）
+            {webglOk.value ? (
+              <MaybachViewer
+                key={viewerKey.value}
+                onReady={handleReady}
+                onContextLost={() => {
+                  // 上下文丢失：整体重建画布并重放配色状态（SRS §2.4-8）
+                  viewerKey.value++
+                }}
+              />
+            ) : (
+              <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-neutral-500">
+                <div class="text-base text-neutral-700">当前浏览器不支持 WebGL</div>
+                <div>请使用 Chrome / Edge ≥110 或 Safari ≥16 访问</div>
               </div>
             )}
           </main>
